@@ -1,0 +1,7 @@
+flags: {}
+packages:
+- .
+docker:
+  enable: true
+extra-deps: []
+resolver: lts-13.16
