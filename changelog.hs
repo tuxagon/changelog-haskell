@@ -5,9 +5,13 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 import           Control.Applicative          ((<|>))
+import           Control.Monad
 import           Data.Char
+import           Data.List
+import           System.Directory
 import           System.Environment
 import           System.Exit                  hiding (die)
+import           System.FilePath.Posix        ((</>))
 import           Text.ParserCombinators.ReadP
 
   {-
@@ -86,9 +90,17 @@ parseReleaseArgs (arg:_) =
         []             -> Nothing
         ((result,_):_) -> Just result
 
+unreleasedDirectory :: FilePath
+unreleasedDirectory =
+  "changelogs" </> "unreleased"
+
 processRelease :: VersionNumber -> IO ()
-processRelease version =
-  putStrLn $ show version
+processRelease version = do
+  files <- getUnreleasedFiles
+  putStrLn $ show files
+  where
+    getUnreleasedFiles =
+      liftM (filter (isSuffixOf ".yaml")) $ getDirectoryContents unreleasedDirectory
 
 handleCommand :: Command -> IO ()
 handleCommand Help          = showUsage >> exit
@@ -106,6 +118,7 @@ showUsage =
   putStrLn
     "changelog - Changelog Utility\n\n\
     \Available Commands:\n\
+    \  release\n\
     \  help\n\
     \  version\n\n\
     \More documentation can be found at https://github.com/tuxagon/changelog-haskell"
