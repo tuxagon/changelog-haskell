@@ -11,4 +11,5 @@ executables:
       - aeson
       - base
       - bytestring
+      - filepath
       - yaml
