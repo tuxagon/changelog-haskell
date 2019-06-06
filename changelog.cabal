@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f4cd2e0721412946aa56237413c8032dc11f18dbd70babe41769055f71e43efd
+-- hash: c1363cbeafe1253030717e9b13df476629779ae2d8bd4e6ddf2be4acb1c7abc3
 
 name:           changelog
 version:        0.1.0.0
@@ -20,6 +20,7 @@ executable changelog
       aeson
     , base
     , bytestring
+    , directory
     , filepath
     , yaml
   default-language: Haskell2010
