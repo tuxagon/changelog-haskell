@@ -51,24 +51,24 @@ main = do
   args <- getArgs
 
   case parse args of
-    Left command -> handleCommand command
-    Right error  -> handleError error >> die
+    Right command -> handleCommand command
+    Left error    -> handleError error >> die
 
-parse :: [String] -> Either Command CommandError
-parse [] = Left Help
+parse :: [String] -> Either CommandError Command
+parse [] = Right Help
 parse (arg:args) =
   case map toLower arg of
     "release"      -> parseReleaseArgs args
-    "help"         -> Left Help
-    "version"      -> Left Version
-    unknownCommand -> Right $ UnknownCommand unknownCommand
+    "help"         -> Right Help
+    "version"      -> Right Version
+    unknownCommand -> Left $ UnknownCommand unknownCommand
 
-parseReleaseArgs :: [String] -> Either Command CommandError
-parseReleaseArgs [] = Right NoVersionSpecified
+parseReleaseArgs :: [String] -> Either CommandError Command
+parseReleaseArgs [] = Left NoVersionSpecified
 parseReleaseArgs (arg:_) =
   case parseVersionNumber arg of
-    Just version -> Left $ Release { versionNumber = version }
-    Nothing      -> Right NoVersionSpecified
+    Just version -> Right $ Release { versionNumber = version }
+    Nothing      -> Left NoVersionSpecified
   where
     number :: ReadP Int
     number = fmap read (many1 $ satisfy isDigit)
