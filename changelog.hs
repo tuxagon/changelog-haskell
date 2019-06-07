@@ -44,7 +44,7 @@ data ParseError
 type Major = Int
 type Minor = Int
 type Patch = Int
-type VersionNumber = (Major, Minor, Patch)
+type VersionNumber = (Major, Minor, Patch, Maybe String)
 
 main :: IO ()
 main = do
@@ -72,14 +72,20 @@ parseReleaseArgs (arg:_) =
   where
     number :: ReadP Int
     number = fmap read (many1 $ satisfy isDigit)
+    letters :: ReadP String
+    letters = fmap read (many1 $ satisfy isLetter)
     dot :: ReadP Char
     dot = satisfy (== '.')
     versionParser :: ReadP VersionNumber
     versionParser = do
       major <- number; dot
       minor <- number; dot
-      patch <- number; eof
-      return (major, minor, patch)
+      patch <- number;
+      build <- option Nothing (fmap Just versionBuildParser)
+      return (major, minor, patch, build)
+    versionBuildParser :: ReadP String
+    versionBuildParser = do
+      dot; letters
     parseVersionNumber :: String -> Maybe VersionNumber
     parseVersionNumber arg =
       case readP_to_S versionParser arg of
