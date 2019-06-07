@@ -38,6 +38,9 @@ data CommandError
    = NoVersionSpecified
    | UnknownCommand String deriving (Show)
 
+data ParseError
+  = BadYaml FilePath deriving (Show)
+
 type Major = Int
 type Minor = Int
 type Patch = Int
@@ -90,12 +93,15 @@ unreleasedDirectory =
 processRelease :: VersionNumber -> IO ()
 processRelease version = do
   unreleasedEntries <- getUnreleasedEntries
-  putStrLn $ show unreleasedEntries
+  case unreleasedEntries of
+    Left (BadYaml file) -> (putStrLn $ "Invalid YAML in '" ++ file ++ "'") >> die
+    Right entries       -> (putStrLn $ show entries) >> exit
 
-getUnreleasedEntries :: IO [Either Y.ParseException UnreleasedEntry]
+getUnreleasedEntries :: IO (Either ParseError [UnreleasedEntry])
 getUnreleasedEntries = do
   files <- getUnreleasedFiles
-  mapM Y.decodeFileEither files
+  unreleasedEntries <- mapM Y.decodeFileEither files
+  return $ foldl checkFiles (Right []) $ zip files unreleasedEntries
   where
     getUnreleasedFiles :: IO [FilePath]
     getUnreleasedFiles =
@@ -103,11 +109,17 @@ getUnreleasedEntries = do
     onlyYamlFiles :: [[Char]] -> [FilePath]
     onlyYamlFiles =
       map (unreleasedDirectory </>) . filter (isSuffixOf ".yaml")
+    checkFiles ::  Either ParseError [UnreleasedEntry] -> (FilePath, Either Y.ParseException UnreleasedEntry) -> Either ParseError [UnreleasedEntry]
+    checkFiles (Left error) _ = Left error
+    checkFiles (Right entries) (file, possibleEntry) =
+      case possibleEntry of
+        Left _      -> Left $ BadYaml file
+        Right entry -> Right $ entry:entries
 
 handleCommand :: Command -> IO ()
 handleCommand Help          = showUsage >> exit
 handleCommand Version       = showVersion >> exit
-handleCommand (Release rel) = processRelease rel >> exit
+handleCommand (Release rel) = processRelease rel
 
 handleError :: CommandError -> IO ()
 handleError error =
