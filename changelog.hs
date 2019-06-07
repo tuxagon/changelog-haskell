@@ -1,20 +1,23 @@
 #!/usr/bin/env stack
 -- stack --resolver lts-13.16 script
 
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+
 
 import           Control.Applicative          ((<|>))
 import           Control.Monad
+import qualified Data.ByteString              as BS
 import           Data.Char
 import           Data.List
+import qualified Data.Yaml                    as Y
+import           GHC.Generics
 import           System.Directory
 import           System.Environment
 import           System.Exit                  hiding (die)
 import           System.FilePath.Posix        ((</>))
 import           Text.ParserCombinators.ReadP
 
-  {-
 
 data UnreleasedEntry
   = UnreleasedEntry
@@ -22,19 +25,9 @@ data UnreleasedEntry
       , mergeRequest :: Maybe String
       , story        :: Maybe String
       , entryType    :: Maybe String
-      }
-
-$(deriveJSON defaultOptions ''UnreleasedEntry)
-
-unreleasedEntry :: UnreleasedEntry
-unreleasedEntry =
-  UnreleasedEntry
-    { title = Nothing
-    , mergeRequest = Nothing
-    , story = Nothing
-    , entryType = Nothing
-    }
-      -}
+      , instructions :: Maybe String
+      } deriving (Generic, Show)
+instance Y.FromJSON UnreleasedEntry
 
 data Command
    = Release { versionNumber :: VersionNumber }
@@ -96,11 +89,20 @@ unreleasedDirectory =
 
 processRelease :: VersionNumber -> IO ()
 processRelease version = do
+  unreleasedEntries <- getUnreleasedEntries
+  putStrLn $ show unreleasedEntries
+
+getUnreleasedEntries :: IO [Either Y.ParseException UnreleasedEntry]
+getUnreleasedEntries = do
   files <- getUnreleasedFiles
-  putStrLn $ show files
+  mapM Y.decodeFileEither files
   where
+    getUnreleasedFiles :: IO [FilePath]
     getUnreleasedFiles =
-      liftM (filter (isSuffixOf ".yaml")) $ getDirectoryContents unreleasedDirectory
+      liftM onlyYamlFiles $ getDirectoryContents unreleasedDirectory
+    onlyYamlFiles :: [[Char]] -> [FilePath]
+    onlyYamlFiles =
+      map (unreleasedDirectory </>) . filter (isSuffixOf ".yaml")
 
 handleCommand :: Command -> IO ()
 handleCommand Help          = showUsage >> exit
